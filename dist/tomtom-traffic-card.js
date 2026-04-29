@@ -188,6 +188,38 @@ class TomtomTrafficCard extends HTMLElement {
     };
   }
 
+
+
+  _normalizeMarkers(markers) {
+    if (!Array.isArray(markers)) return [];
+    return markers
+      .map((marker) => {
+        if (!marker || !Array.isArray(marker.center) || marker.center.length !== 2) return null;
+        const lng = Number(marker.center[0]);
+        const lat = Number(marker.center[1]);
+        if (Number.isNaN(lng) || Number.isNaN(lat)) return null;
+        return {
+          lat,
+          lng,
+          icon: marker.icon || "",
+          label: marker.label || "",
+          color: marker.color || "#1d4ed8",
+        };
+      })
+      .filter(Boolean);
+  }
+
+  _serializeMarkers(markerRows) {
+    return (markerRows || [])
+      .filter((row) => Number.isFinite(row.lat) && Number.isFinite(row.lng))
+      .map((row) => ({
+        center: [row.lng, row.lat],
+        icon: row.icon || undefined,
+        label: row.label || undefined,
+        color: row.color || undefined,
+      }));
+  }
+
   _render() {
     if (!this._config) {
       return;
@@ -512,12 +544,12 @@ class TomtomTrafficCardEditor extends HTMLElement {
           <input data-key="api_key" type="text" value="${this._config.api_key || ""}" />
         </label>
         <label>
-          Center Longitude
-          <input data-key="center_lng" type="number" step="any" value="${this._config.center?.[0] ?? -82.9988}" />
-        </label>
-        <label>
           Center Latitude
           <input data-key="center_lat" type="number" step="any" value="${this._config.center?.[1] ?? 39.9612}" />
+        </label>
+        <label>
+          Center Longitude
+          <input data-key="center_lng" type="number" step="any" value="${this._config.center?.[0] ?? -82.9988}" />
         </label>
         <label>
           Zoom
@@ -584,10 +616,30 @@ class TomtomTrafficCardEditor extends HTMLElement {
               .join("")}
           </select>
         </label>
-        <label>
-          Markers (JSON Array)
-          <input data-key="markers" type="text" value='${JSON.stringify(this._config.markers || [])}' placeholder='[{"center":[-82.99,39.96],"icon":"🏠","label":"Home"}]' />
-        </label>
+        <div class="markers-section">
+          <div class="markers-header">
+            <span>Markers</span>
+            <button type="button" data-action="add-marker">Add marker</button>
+          </div>
+          <p class="markers-help">Set marker latitude/longitude and optional icon, label, and color.</p>
+          <div class="markers-grid">
+            ${this._normalizeMarkers(this._config.markers)
+              .map(
+                (marker, index) => `
+                  <div class="marker-row">
+                    <label>Lat<input data-marker-index="${index}" data-marker-field="lat" type="number" step="any" value="${marker.lat}" /></label>
+                    <label>Lng<input data-marker-index="${index}" data-marker-field="lng" type="number" step="any" value="${marker.lng}" /></label>
+                    <label>Icon<input data-marker-index="${index}" data-marker-field="icon" type="text" value="${marker.icon}" placeholder="🏠" /></label>
+                    <label>Label<input data-marker-index="${index}" data-marker-field="label" type="text" value="${marker.label}" placeholder="Home" /></label>
+                    <label>Color<input data-marker-index="${index}" data-marker-field="color" type="color" value="${marker.color}" /></label>
+                    <button type="button" data-action="remove-marker" data-marker-index="${index}">Remove</button>
+                  </div>
+                `
+              )
+              .join("")}
+            ${this._normalizeMarkers(this._config.markers).length === 0 ? '<p class="markers-empty">No markers yet. Click “Add marker”.</p>' : ''}
+          </div>
+        </div>
       </div>
       <style>
         .editor-grid {
@@ -602,7 +654,8 @@ class TomtomTrafficCardEditor extends HTMLElement {
           color: var(--primary-text-color);
         }
         input,
-        select {
+        select,
+        button {
           font: inherit;
           padding: 8px;
           border-radius: 8px;
@@ -610,12 +663,58 @@ class TomtomTrafficCardEditor extends HTMLElement {
           background: var(--card-background-color);
           color: var(--primary-text-color);
         }
+        button {
+          cursor: pointer;
+        }
+        .markers-section {
+          display: grid;
+          gap: 8px;
+        }
+        .markers-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 0.95rem;
+          color: var(--primary-text-color);
+        }
+        .markers-help,
+        .markers-empty {
+          margin: 0;
+          font-size: 0.85rem;
+          opacity: 0.8;
+        }
+        .marker-row {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+          gap: 8px;
+          align-items: end;
+          padding: 8px;
+          border: 1px solid var(--divider-color);
+          border-radius: 8px;
+        }
       </style>
     `;
 
     this.shadowRoot.querySelectorAll("input, select").forEach((el) => {
       el.addEventListener("change", (event) => this._handleChange(event));
     });
+    this.shadowRoot.querySelectorAll('button[data-action]').forEach((button) => {
+      button.addEventListener('click', (event) => this._handleMarkerAction(event));
+    });
+  }
+
+  _handleMarkerAction(event) {
+    const action = event.currentTarget.dataset.action;
+    const markers = this._normalizeMarkers(this._config.markers);
+    if (action === 'add-marker') {
+      markers.push({ lat: 39.9612, lng: -82.9988, icon: '', label: '', color: '#1d4ed8' });
+    } else if (action === 'remove-marker') {
+      const index = Number(event.currentTarget.dataset.markerIndex);
+      if (!Number.isNaN(index)) markers.splice(index, 1);
+    }
+    this._config = { ...this._config, markers: this._serializeMarkers(markers) };
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
+    this._render();
   }
 
   _handleChange(event) {
@@ -635,11 +734,13 @@ class TomtomTrafficCardEditor extends HTMLElement {
       next[key] = Number(value);
     } else if (key === "show_title" || key === "lock_map") {
       next[key] = value === "true";
-    } else if (key === "markers") {
-      try {
-        next.markers = value.trim() ? JSON.parse(value) : [];
-      } catch (_error) {
-        return;
+    } else if (event.target.dataset.markerIndex !== undefined) {
+      const index = Number(event.target.dataset.markerIndex);
+      const field = event.target.dataset.markerField;
+      const markers = this._normalizeMarkers(next.markers);
+      if (!Number.isNaN(index) && markers[index]) {
+        markers[index][field] = field === 'lat' || field === 'lng' ? Number(value) : value;
+        next.markers = this._serializeMarkers(markers);
       }
     } else {
       next[key] = value;

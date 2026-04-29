@@ -1,3 +1,33 @@
+function normalizeMarkers(markers) {
+  if (!Array.isArray(markers)) return [];
+  return markers
+    .map((marker) => {
+      if (!marker || !Array.isArray(marker.center) || marker.center.length !== 2) return null;
+      const lng = Number(marker.center[0]);
+      const lat = Number(marker.center[1]);
+      if (Number.isNaN(lng) || Number.isNaN(lat)) return null;
+      return {
+        lat,
+        lng,
+        icon: marker.icon || "",
+        label: marker.label || "",
+        color: marker.color || "#1d4ed8",
+      };
+    })
+    .filter(Boolean);
+}
+
+function serializeMarkers(markerRows) {
+  return (markerRows || [])
+    .filter((row) => Number.isFinite(row.lat) && Number.isFinite(row.lng))
+    .map((row) => ({
+      center: [row.lng, row.lat],
+      icon: row.icon || undefined,
+      label: row.label || undefined,
+      color: row.color || undefined,
+    }));
+}
+
 class TomtomTrafficCard extends HTMLElement {
   static getStubConfig() {
     return {
@@ -189,36 +219,6 @@ class TomtomTrafficCard extends HTMLElement {
   }
 
 
-
-  _normalizeMarkers(markers) {
-    if (!Array.isArray(markers)) return [];
-    return markers
-      .map((marker) => {
-        if (!marker || !Array.isArray(marker.center) || marker.center.length !== 2) return null;
-        const lng = Number(marker.center[0]);
-        const lat = Number(marker.center[1]);
-        if (Number.isNaN(lng) || Number.isNaN(lat)) return null;
-        return {
-          lat,
-          lng,
-          icon: marker.icon || "",
-          label: marker.label || "",
-          color: marker.color || "#1d4ed8",
-        };
-      })
-      .filter(Boolean);
-  }
-
-  _serializeMarkers(markerRows) {
-    return (markerRows || [])
-      .filter((row) => Number.isFinite(row.lat) && Number.isFinite(row.lng))
-      .map((row) => ({
-        center: [row.lng, row.lat],
-        icon: row.icon || undefined,
-        label: row.label || undefined,
-        color: row.color || undefined,
-      }));
-  }
 
   _render() {
     if (!this._config) {
@@ -653,7 +653,7 @@ class TomtomTrafficCardEditor extends HTMLElement {
           </div>
           <p class="markers-help">Set marker latitude/longitude and optional icon, label, and color.</p>
           <div class="markers-grid">
-            ${this._normalizeMarkers(this._config.markers)
+            ${normalizeMarkers(this._config.markers)
               .map(
                 (marker, index) => `
                   <div class="marker-row">
@@ -667,7 +667,7 @@ class TomtomTrafficCardEditor extends HTMLElement {
                 `
               )
               .join("")}
-            ${this._normalizeMarkers(this._config.markers).length === 0 ? '<p class="markers-empty">No markers yet. Click “Add marker”.</p>' : ''}
+            ${normalizeMarkers(this._config.markers).length === 0 ? '<p class="markers-empty">No markers yet. Click “Add marker”.</p>' : ''}
           </div>
         </div>
       </div>
@@ -735,14 +735,14 @@ class TomtomTrafficCardEditor extends HTMLElement {
 
   _handleMarkerAction(event) {
     const action = event.currentTarget.dataset.action;
-    const markers = this._normalizeMarkers(this._config.markers);
+    const markers = normalizeMarkers(this._config.markers);
     if (action === 'add-marker') {
       markers.push({ lat: 39.9612, lng: -82.9988, icon: '', label: '', color: '#1d4ed8' });
     } else if (action === 'remove-marker') {
       const index = Number(event.currentTarget.dataset.markerIndex);
       if (!Number.isNaN(index)) markers.splice(index, 1);
     }
-    this._config = { ...this._config, markers: this._serializeMarkers(markers) };
+    this._config = { ...this._config, markers: serializeMarkers(markers) };
     this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
     this._render();
   }
@@ -767,10 +767,10 @@ class TomtomTrafficCardEditor extends HTMLElement {
     } else if (event.target.dataset.markerIndex !== undefined) {
       const index = Number(event.target.dataset.markerIndex);
       const field = event.target.dataset.markerField;
-      const markers = this._normalizeMarkers(next.markers);
+      const markers = normalizeMarkers(next.markers);
       if (!Number.isNaN(index) && markers[index]) {
         markers[index][field] = field === 'lat' || field === 'lng' ? Number(value) : value;
-        next.markers = this._serializeMarkers(markers);
+        next.markers = serializeMarkers(markers);
       }
     } else {
       next[key] = value;

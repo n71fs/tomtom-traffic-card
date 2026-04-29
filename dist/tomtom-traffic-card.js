@@ -15,10 +15,6 @@ class TomtomTrafficCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config || !config.api_key) {
-      throw new Error("tomtom-traffic-card: api_key is required");
-    }
-
     const defaults = {
       center: [-82.9988, 39.9612],
       zoom: 11,
@@ -109,6 +105,17 @@ class TomtomTrafficCard extends HTMLElement {
 
     this._mapContainer = this.shadowRoot.getElementById("map");
     this._mapContainer.style.height = this._config.height || "500px";
+
+    if (!this._config.api_key) {
+      this._mapContainer.innerHTML = `
+        <div style="padding: 16px; color: var(--warning-color, var(--primary-text-color));">
+          Enter a TomTom API key in the card configuration to load the traffic map.
+        </div>
+      `;
+      return;
+    }
+
+    this._mapContainer.innerHTML = "";
 
     if (!this._initialized) {
       this._initialized = true;

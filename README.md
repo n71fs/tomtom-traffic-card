@@ -68,6 +68,7 @@ tomtom-traffic-card.js
 ```yaml
 type: custom:tomtom-traffic-card
 api_key: YOUR_TOMTOM_API_KEY
+title: Downtown Traffic
 ```
 
 ### Full example
@@ -95,6 +96,7 @@ base_url: api.tomtom.com
 | `center` | `[lng, lat]` | ❌ | `[-82.9988, 39.9612]` | Map center coordinates. |
 | `zoom` | number | ❌ | `11` | Initial zoom. |
 | `height` | string | ❌ | `"500px"` | CSS height for map container. |
+| `title` | string | ❌ | `""` | Optional title shown as a small overlay on top of the map. |
 | `flow_style` | string | ❌ | `"relative0"` | One of: `absolute`, `relative`, `relative0`, `relative0-dark`, `relative-delay`, `reduced-sensitivity`. |
 | `opacity` | number | ❌ | `0.85` | Traffic layer opacity (0 to 1). |
 | `thickness` | number | ❌ | `10` | Segment width multiplier (`1..20`) for `absolute`, `relative`, `relative-delay`, `reduced-sensitivity`. |

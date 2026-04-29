@@ -11,6 +11,7 @@ class TomtomTrafficCard extends HTMLElement {
       tile_size: 256,
       base_url: "api.tomtom.com",
       basemap: "osm",
+      title: "",
     };
   }
 
@@ -29,6 +30,7 @@ class TomtomTrafficCard extends HTMLElement {
       tile_size: 256,
       base_url: "api.tomtom.com",
       basemap: "osm",
+      title: "",
     };
 
     const merged = { ...defaults, ...config };
@@ -182,8 +184,11 @@ class TomtomTrafficCard extends HTMLElement {
 
     if (!this.shadowRoot.querySelector("ha-card")) {
       this.shadowRoot.innerHTML = `
-        <ha-card header="TomTom Traffic">
-          <div id="map" part="map"></div>
+        <ha-card>
+          <div id="frame">
+            <div id="map" part="map"></div>
+            <div id="title" part="title"></div>
+          </div>
         </ha-card>
         <style>
           :host {
@@ -191,10 +196,34 @@ class TomtomTrafficCard extends HTMLElement {
           }
           ha-card {
             overflow: hidden;
+            border-radius: 16px;
+          }
+          #frame {
+            position: relative;
           }
           #map {
             width: 100%;
             min-height: 250px;
+          }
+          #title {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            right: 14px;
+            z-index: 2;
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            line-height: 1.3;
+            padding: 10px 14px;
+            border-radius: 12px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.3));
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+            pointer-events: none;
+            display: none;
           }
         </style>
       `;
@@ -202,6 +231,15 @@ class TomtomTrafficCard extends HTMLElement {
 
     this._mapContainer = this.shadowRoot.getElementById("map");
     this._mapContainer.style.height = this._config.height || "500px";
+    const titleEl = this.shadowRoot.getElementById("title");
+    const title = (this._config.title || "").trim();
+    if (title) {
+      titleEl.textContent = title;
+      titleEl.style.display = "block";
+    } else {
+      titleEl.textContent = "";
+      titleEl.style.display = "none";
+    }
 
 
     if (!this._initialized) {
@@ -237,8 +275,6 @@ class TomtomTrafficCard extends HTMLElement {
         center,
         zoom,
       });
-
-      this._map.addControl(new window.maplibregl.NavigationControl(), "top-right");
 
       this._map.on("load", () => {
         this._addOrUpdateFlowLayer();
@@ -390,6 +426,10 @@ class TomtomTrafficCardEditor extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <div class="editor-grid">
+        <label>
+          Title (Optional)
+          <input data-key="title" type="text" value="${this._config.title || ""}" placeholder="Traffic around Downtown" />
+        </label>
         <label>
           API Key
           <input data-key="api_key" type="text" value="${this._config.api_key || ""}" />

@@ -5,8 +5,11 @@ class TomtomTrafficCard extends HTMLElement {
       center: [-82.9988, 39.9612],
       zoom: 11,
       height: "500px",
-      flow_style: "relative",
+      flow_style: "relative0",
       opacity: 0.85,
+      thickness: 10,
+      tile_size: 256,
+      base_url: "api.tomtom.com",
     };
   }
 
@@ -19,12 +22,17 @@ class TomtomTrafficCard extends HTMLElement {
       center: [-82.9988, 39.9612],
       zoom: 11,
       height: "500px",
-      flow_style: "relative",
+      flow_style: "relative0",
       opacity: 0.85,
+      thickness: 10,
+      tile_size: 256,
+      base_url: "api.tomtom.com",
     };
 
     const merged = { ...defaults, ...config };
-    const validStyles = ["absolute", "relative", "relative-delay"];
+    const validStyles = ["absolute", "relative", "relative0", "relative0-dark", "relative-delay", "reduced-sensitivity"];
+    const validTileSizes = [256, 512];
+    const validBaseUrls = ["api.tomtom.com", "kr-api.tomtom.com"];
 
     if (!Array.isArray(merged.center) || merged.center.length !== 2) {
       throw new Error("tomtom-traffic-card: center must be [lng, lat]");
@@ -34,6 +42,22 @@ class TomtomTrafficCard extends HTMLElement {
       throw new Error(
         `tomtom-traffic-card: flow_style must be one of ${validStyles.join(", ")}`
       );
+    }
+
+    if (merged.opacity < 0 || merged.opacity > 1) {
+      throw new Error("tomtom-traffic-card: opacity must be between 0 and 1");
+    }
+
+    if (!Number.isInteger(merged.thickness) || merged.thickness < 1 || merged.thickness > 20) {
+      throw new Error("tomtom-traffic-card: thickness must be an integer between 1 and 20");
+    }
+
+    if (!validTileSizes.includes(merged.tile_size)) {
+      throw new Error(`tomtom-traffic-card: tile_size must be one of ${validTileSizes.join(", ")}`);
+    }
+
+    if (!validBaseUrls.includes(merged.base_url)) {
+      throw new Error(`tomtom-traffic-card: base_url must be one of ${validBaseUrls.join(", ")}`);
     }
 
     this._config = merged;
@@ -207,12 +231,22 @@ class TomtomTrafficCard extends HTMLElement {
       return;
     }
 
-    const tileUrl = `https://api.tomtom.com/traffic/map/4/tile/flow/${this._config.flow_style}/{z}/{x}/{y}.png?key=${encodeURIComponent(this._config.api_key)}`;
+    const params = new URLSearchParams({
+      key: this._config.api_key,
+      tileSize: String(this._config.tile_size),
+    });
+
+    const thicknessCompatible = ["absolute", "relative", "relative-delay", "reduced-sensitivity"];
+    if (thicknessCompatible.includes(this._config.flow_style)) {
+      params.set("thickness", String(this._config.thickness));
+    }
+
+    const tileUrl = `https://${this._config.base_url}/traffic/map/4/tile/flow/${this._config.flow_style}/{z}/{x}/{y}.png?${params.toString()}`;
 
     this._map.addSource(sourceId, {
       type: "raster",
       tiles: [tileUrl],
-      tileSize: 256,
+      tileSize: this._config.tile_size,
     });
 
     this._map.addLayer({
@@ -316,7 +350,7 @@ class TomtomTrafficCardEditor extends HTMLElement {
         <label>
           Flow Style
           <select data-key="flow_style">
-            ${["relative", "absolute", "relative-delay"]
+            ${["relative0", "relative0-dark", "relative", "absolute", "relative-delay", "reduced-sensitivity"]
               .map(
                 (style) =>
                   `<option value="${style}" ${this._config.flow_style === style ? "selected" : ""}>${style}</option>`
@@ -327,6 +361,32 @@ class TomtomTrafficCardEditor extends HTMLElement {
         <label>
           Overlay Opacity (0.0 - 1.0)
           <input data-key="opacity" type="number" min="0" max="1" step="0.05" value="${this._config.opacity ?? 0.85}" />
+        </label>
+        <label>
+          Thickness (1 - 20)
+          <input data-key="thickness" type="number" min="1" max="20" step="1" value="${this._config.thickness ?? 10}" />
+        </label>
+        <label>
+          Tile Size
+          <select data-key="tile_size">
+            ${[256, 512]
+              .map(
+                (size) =>
+                  `<option value="${size}" ${Number(this._config.tile_size) === size ? "selected" : ""}>${size}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <label>
+          TomTom Base URL
+          <select data-key="base_url">
+            ${["api.tomtom.com", "kr-api.tomtom.com"]
+              .map(
+                (baseUrl) =>
+                  `<option value="${baseUrl}" ${this._config.base_url === baseUrl ? "selected" : ""}>${baseUrl}</option>`
+              )
+              .join("")}
+          </select>
         </label>
       </div>
       <style>
@@ -371,7 +431,7 @@ class TomtomTrafficCardEditor extends HTMLElement {
         this.shadowRoot.querySelector('input[data-key="center_lat"]').value
       );
       next.center = [lng, lat];
-    } else if (key === "zoom" || key === "opacity") {
+    } else if (key === "zoom" || key === "opacity" || key === "thickness" || key === "tile_size") {
       next[key] = Number(value);
     } else {
       next[key] = value;

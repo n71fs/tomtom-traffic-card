@@ -14,10 +14,17 @@ A **frontend-only** Home Assistant Lovelace custom card that renders a MapLibre 
 - Custom element: `tomtom-traffic-card`
 - Uses `<ha-card>`
 - Dynamically loads MapLibre GL JS + CSS from CDN (if not already loaded)
-- Supports TomTom `flow_style` values:
+- Supports all documented TomTom raster flow styles:
   - `absolute`
   - `relative`
+  - `relative0`
+  - `relative0-dark`
   - `relative-delay`
+  - `reduced-sensitivity`
+- Supports optional TomTom request parameters:
+  - `thickness` (1-20, style-dependent)
+  - `tile_size` (256 or 512)
+  - `base_url` (`api.tomtom.com` or `kr-api.tomtom.com`)
 
 ## Installation
 
@@ -73,8 +80,11 @@ center:
   - 39.9612
 zoom: 11
 height: 500px
-flow_style: relative
+flow_style: relative0
 opacity: 0.85
+thickness: 10
+tile_size: 256
+base_url: api.tomtom.com
 ```
 
 ## Card configuration
@@ -85,13 +95,16 @@ opacity: 0.85
 | `center` | `[lng, lat]` | ❌ | `[-82.9988, 39.9612]` | Map center coordinates. |
 | `zoom` | number | ❌ | `11` | Initial zoom. |
 | `height` | string | ❌ | `"500px"` | CSS height for map container. |
-| `flow_style` | string | ❌ | `"relative"` | One of: `absolute`, `relative`, `relative-delay`. |
+| `flow_style` | string | ❌ | `"relative0"` | One of: `absolute`, `relative`, `relative0`, `relative0-dark`, `relative-delay`, `reduced-sensitivity`. |
 | `opacity` | number | ❌ | `0.85` | Traffic layer opacity (0 to 1). |
+| `thickness` | number | ❌ | `10` | Segment width multiplier (`1..20`) for `absolute`, `relative`, `relative-delay`, `reduced-sensitivity`. |
+| `tile_size` | number | ❌ | `256` | Tile size in pixels (`256` or `512`). |
+| `base_url` | string | ❌ | `"api.tomtom.com"` | TomTom endpoint host: `api.tomtom.com` or `kr-api.tomtom.com`. |
 
 ## TomTom traffic tile URL used
 
 ```text
-https://api.tomtom.com/traffic/map/4/tile/flow/{flow_style}/{z}/{x}/{y}.png?key={api_key}
+https://{base_url}/traffic/map/4/tile/flow/{flow_style}/{z}/{x}/{y}.png?key={api_key}&tileSize={tile_size}&thickness={thickness}
 ```
 
 ## Notes

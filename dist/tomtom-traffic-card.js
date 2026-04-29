@@ -291,19 +291,99 @@ class TomtomTrafficCardEditor extends HTMLElement {
     }
 
     this.shadowRoot.innerHTML = `
-      <div class="editor-note">
-        Visual editor is not available yet for this card.<br />
-        Continue editing the YAML configuration directly.
+      <div class="editor-grid">
+        <label>
+          API Key
+          <input data-key="api_key" type="text" value="${this._config.api_key || ""}" />
+        </label>
+        <label>
+          Center Longitude
+          <input data-key="center_lng" type="number" step="any" value="${this._config.center?.[0] ?? -82.9988}" />
+        </label>
+        <label>
+          Center Latitude
+          <input data-key="center_lat" type="number" step="any" value="${this._config.center?.[1] ?? 39.9612}" />
+        </label>
+        <label>
+          Zoom
+          <input data-key="zoom" type="number" min="0" max="22" step="0.1" value="${this._config.zoom ?? 11}" />
+        </label>
+        <label>
+          Height
+          <input data-key="height" type="text" value="${this._config.height || "500px"}" placeholder="e.g. 500px or 60vh" />
+        </label>
+        <label>
+          Flow Style
+          <select data-key="flow_style">
+            ${["relative", "absolute", "relative-delay"]
+              .map(
+                (style) =>
+                  `<option value="${style}" ${this._config.flow_style === style ? "selected" : ""}>${style}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <label>
+          Overlay Opacity (0.0 - 1.0)
+          <input data-key="opacity" type="number" min="0" max="1" step="0.05" value="${this._config.opacity ?? 0.85}" />
+        </label>
       </div>
       <style>
-        .editor-note {
+        .editor-grid {
+          display: grid;
+          gap: 12px;
+          padding: 8px 0;
+        }
+        label {
+          display: grid;
+          gap: 6px;
           font-size: 0.95rem;
-          line-height: 1.4;
-          color: var(--secondary-text-color);
-          padding: 12px 0;
+          color: var(--primary-text-color);
+        }
+        input,
+        select {
+          font: inherit;
+          padding: 8px;
+          border-radius: 8px;
+          border: 1px solid var(--divider-color);
+          background: var(--card-background-color);
+          color: var(--primary-text-color);
         }
       </style>
     `;
+
+    this.shadowRoot.querySelectorAll("input, select").forEach((el) => {
+      el.addEventListener("change", (event) => this._handleChange(event));
+    });
+  }
+
+  _handleChange(event) {
+    const key = event.target.dataset.key;
+    const value = event.target.value;
+    const next = { ...this._config };
+
+    if (key === "center_lng" || key === "center_lat") {
+      const lng = Number(
+        this.shadowRoot.querySelector('input[data-key="center_lng"]').value
+      );
+      const lat = Number(
+        this.shadowRoot.querySelector('input[data-key="center_lat"]').value
+      );
+      next.center = [lng, lat];
+    } else if (key === "zoom" || key === "opacity") {
+      next[key] = Number(value);
+    } else {
+      next[key] = value;
+    }
+
+    this._config = next;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: next },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 }
 

@@ -398,7 +398,7 @@ class TomtomTrafficCard extends HTMLElement {
       const marker = new window.maplibregl.Marker({
         element: markerElement,
         anchor: "center",
-        subpixelPositioning: true,
+        offset: [0, 0],
       }).setLngLat(markerLngLat);
       if (markerConfig.label) {
         marker.setPopup(new window.maplibregl.Popup({ offset: 20 }).setText(markerConfig.label));

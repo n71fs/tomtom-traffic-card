@@ -506,6 +506,36 @@ class TomtomTrafficCard extends HTMLElement {
 }
 
 class TomtomTrafficCardEditor extends HTMLElement {
+  _normalizeMarkers(markers) {
+    if (!Array.isArray(markers)) return [];
+    return markers
+      .map((marker) => {
+        if (!marker || !Array.isArray(marker.center) || marker.center.length !== 2) return null;
+        const lng = Number(marker.center[0]);
+        const lat = Number(marker.center[1]);
+        if (Number.isNaN(lng) || Number.isNaN(lat)) return null;
+        return {
+          lat,
+          lng,
+          icon: marker.icon || "",
+          label: marker.label || "",
+          color: marker.color || "#1d4ed8",
+        };
+      })
+      .filter(Boolean);
+  }
+
+  _serializeMarkers(markerRows) {
+    return (markerRows || [])
+      .filter((row) => Number.isFinite(row.lat) && Number.isFinite(row.lng))
+      .map((row) => ({
+        center: [row.lng, row.lat],
+        icon: row.icon || undefined,
+        label: row.label || undefined,
+        color: row.color || undefined,
+      }));
+  }
+
   setConfig(config) {
     this._config = {
       ...TomtomTrafficCard.getStubConfig(),

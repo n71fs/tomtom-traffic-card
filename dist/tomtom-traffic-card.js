@@ -7,12 +7,11 @@ class TomtomTrafficCard extends HTMLElement {
       height: "500px",
       flow_style: "relative",
       opacity: 0.85,
-      basemap: "osm",
     };
   }
 
   static getConfigElement() {
-    return document.createElement("tomtom-traffic-card-editor");
+    return document.createElement("div");
   }
 
   setConfig(config) {
@@ -26,12 +25,10 @@ class TomtomTrafficCard extends HTMLElement {
       height: "500px",
       flow_style: "relative",
       opacity: 0.85,
-      basemap: "osm",
     };
 
     const merged = { ...defaults, ...config };
     const validStyles = ["absolute", "relative", "relative-delay"];
-    const basemaps = this._getBasemapDefinitions();
 
     if (!Array.isArray(merged.center) || merged.center.length !== 2) {
       throw new Error("tomtom-traffic-card: center must be [lng, lat]");
@@ -40,12 +37,6 @@ class TomtomTrafficCard extends HTMLElement {
     if (!validStyles.includes(merged.flow_style)) {
       throw new Error(
         `tomtom-traffic-card: flow_style must be one of ${validStyles.join(", ")}`
-      );
-    }
-
-    if (!basemaps[merged.basemap]) {
-      throw new Error(
-        `tomtom-traffic-card: basemap must be one of ${Object.keys(basemaps).join(", ")}`
       );
     }
 
@@ -91,31 +82,6 @@ class TomtomTrafficCard extends HTMLElement {
     return 5;
   }
 
-  _getBasemapDefinitions() {
-    return {
-      osm: {
-        tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        ],
-        attribution: "© OpenStreetMap contributors",
-      },
-      carto_light: {
-        tiles: ["https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"],
-        attribution: "© OpenStreetMap contributors © CARTO",
-      },
-      carto_dark: {
-        tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"],
-        attribution: "© OpenStreetMap contributors © CARTO",
-      },
-      topo: {
-        tiles: ["https://tile.opentopomap.org/{z}/{x}/{y}.png"],
-        attribution: "© OpenStreetMap contributors, SRTM | © OpenTopoMap",
-      },
-    };
-  }
-
   _render() {
     if (!this._config) {
       return;
@@ -159,25 +125,29 @@ class TomtomTrafficCard extends HTMLElement {
       }
 
       const { center, zoom } = this._config;
-      const basemap = this._getBasemapDefinitions()[this._config.basemap];
 
       this._map = new window.maplibregl.Map({
         container: this._mapContainer,
         style: {
           version: 8,
           sources: {
-            basemap: {
+            osm: {
               type: "raster",
-              tiles: basemap.tiles,
+              tiles: [
+                "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+              ],
               tileSize: 256,
-              attribution: `${basemap.attribution}, Traffic © TomTom`,
+              attribution:
+                "© OpenStreetMap contributors, Traffic © TomTom",
             },
           },
           layers: [
             {
-              id: "basemap-layer",
+              id: "osm-base",
               type: "raster",
-              source: "basemap",
+              source: "osm",
               minzoom: 0,
               maxzoom: 22,
             },
@@ -306,25 +276,12 @@ class TomtomTrafficCard extends HTMLElement {
   }
 }
 
-if (!customElements.get("tomtom-traffic-card")) {
-  customElements.define("tomtom-traffic-card", TomtomTrafficCard);
-}
+customElements.define("tomtom-traffic-card", TomtomTrafficCard);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "tomtom-traffic-card",
   name: "TomTom Traffic Card",
   description:
-    "Displays a configurable basemap with TomTom Traffic Flow raster overlay.",
+    "Displays an OpenStreetMap base map with TomTom Traffic Flow raster overlay.",
 });
-
-
-class TomtomTrafficCardEditor extends HTMLElement {
-  setConfig(config) {
-    this._config = config || {};
-  }
-}
-
-if (!customElements.get("tomtom-traffic-card-editor")) {
-  customElements.define("tomtom-traffic-card-editor", TomtomTrafficCardEditor);
-}

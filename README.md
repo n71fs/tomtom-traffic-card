@@ -81,7 +81,7 @@ opacity: 0.85
 
 | Key | Type | Required | Default | Notes |
 |---|---|---|---|---|
-| `api_key` | string | ✅ | — | TomTom API key (required). |
+| `api_key` | string | ❌ | — | TomTom API key for traffic overlay (base map still loads without it). |
 | `center` | `[lng, lat]` | ❌ | `[-82.9988, 39.9612]` | Map center coordinates. |
 | `zoom` | number | ❌ | `11` | Initial zoom. |
 | `height` | string | ❌ | `"500px"` | CSS height for map container. |

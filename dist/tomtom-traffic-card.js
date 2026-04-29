@@ -106,15 +106,6 @@ class TomtomTrafficCard extends HTMLElement {
     this._mapContainer = this.shadowRoot.getElementById("map");
     this._mapContainer.style.height = this._config.height || "500px";
 
-    if (!this._config.api_key) {
-      this._mapContainer.innerHTML = `
-        <div style="padding: 16px; color: var(--warning-color, var(--primary-text-color));">
-          Enter a TomTom API key in the card configuration to load the traffic map.
-        </div>
-      `;
-      return;
-    }
-
     this._mapContainer.innerHTML = "";
 
     if (!this._initialized) {
@@ -203,8 +194,6 @@ class TomtomTrafficCard extends HTMLElement {
     const sourceId = "tomtom-flow-source";
     const layerId = "tomtom-flow-layer";
 
-    const tileUrl = `https://api.tomtom.com/traffic/map/4/tile/flow/${this._config.flow_style}/{z}/{x}/{y}.png?key=${encodeURIComponent(this._config.api_key)}`;
-
     const existingLayer = this._map.getLayer(layerId);
     if (existingLayer) {
       this._map.removeLayer(layerId);
@@ -214,6 +203,12 @@ class TomtomTrafficCard extends HTMLElement {
     if (existingSource) {
       this._map.removeSource(sourceId);
     }
+
+    if (!this._config.api_key) {
+      return;
+    }
+
+    const tileUrl = `https://api.tomtom.com/traffic/map/4/tile/flow/${this._config.flow_style}/{z}/{x}/{y}.png?key=${encodeURIComponent(this._config.api_key)}`;
 
     this._map.addSource(sourceId, {
       type: "raster",

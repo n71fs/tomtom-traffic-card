@@ -393,8 +393,13 @@ class TomtomTrafficCard extends HTMLElement {
       markerElement.style.fontWeight = "700";
       markerElement.style.boxShadow = "0 2px 8px rgba(0,0,0,0.35)";
       markerElement.textContent = markerConfig.icon || "•";
-      const marker = new window.maplibregl.Marker({ element: markerElement })
-        .setLngLat(markerConfig.center);
+      const markerLngLat = [Number(markerConfig.center[0]), Number(markerConfig.center[1])];
+      if (Number.isNaN(markerLngLat[0]) || Number.isNaN(markerLngLat[1])) return;
+      const marker = new window.maplibregl.Marker({
+        element: markerElement,
+        anchor: "center",
+        subpixelPositioning: true,
+      }).setLngLat(markerLngLat);
       if (markerConfig.label) {
         marker.setPopup(new window.maplibregl.Popup({ offset: 20 }).setText(markerConfig.label));
       }

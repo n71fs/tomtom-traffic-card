@@ -11,7 +11,7 @@ class TomtomTrafficCard extends HTMLElement {
   }
 
   static getConfigElement() {
-    return document.createElement("div");
+    return document.createElement("tomtom-traffic-card-editor");
   }
 
   setConfig(config) {
@@ -275,6 +275,39 @@ class TomtomTrafficCard extends HTMLElement {
     return this._loadPromise;
   }
 }
+
+class TomtomTrafficCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = {
+      ...TomtomTrafficCard.getStubConfig(),
+      ...(config || {}),
+    };
+    this._render();
+  }
+
+  _render() {
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+    }
+
+    this.shadowRoot.innerHTML = `
+      <div class="editor-note">
+        Visual editor is not available yet for this card.<br />
+        Continue editing the YAML configuration directly.
+      </div>
+      <style>
+        .editor-note {
+          font-size: 0.95rem;
+          line-height: 1.4;
+          color: var(--secondary-text-color);
+          padding: 12px 0;
+        }
+      </style>
+    `;
+  }
+}
+
+customElements.define("tomtom-traffic-card-editor", TomtomTrafficCardEditor);
 
 customElements.define("tomtom-traffic-card", TomtomTrafficCard);
 

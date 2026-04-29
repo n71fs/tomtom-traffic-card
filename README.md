@@ -69,6 +69,7 @@ tomtom-traffic-card.js
 type: custom:tomtom-traffic-card
 api_key: YOUR_TOMTOM_API_KEY
 title: Downtown Traffic
+show_title: true
 ```
 
 ### Full example
@@ -86,6 +87,12 @@ opacity: 0.85
 thickness: 10
 tile_size: 256
 base_url: api.tomtom.com
+lock_map: false
+markers:
+  - center: [-82.9988, 39.9612]
+    icon: "🏠"
+    label: Home
+    color: "#2563eb"
 ```
 
 ## Card configuration
@@ -97,12 +104,15 @@ base_url: api.tomtom.com
 | `zoom` | number | ❌ | `11` | Initial zoom. |
 | `height` | string | ❌ | `"500px"` | CSS height for map container. |
 | `title` | string | ❌ | `""` | Optional title shown as a small overlay on top of the map. |
+| `show_title` | boolean | ❌ | `false` | Controls whether the title overlay is rendered. |
 | `flow_style` | string | ❌ | `"relative0"` | One of: `absolute`, `relative`, `relative0`, `relative0-dark`, `relative-delay`, `reduced-sensitivity`. |
 | `opacity` | number | ❌ | `0.85` | Traffic layer opacity (0 to 1). |
 | `thickness` | number | ❌ | `10` | Segment width multiplier (`1..20`) for `absolute`, `relative`, `relative-delay`, `reduced-sensitivity`. |
 | `tile_size` | number | ❌ | `256` | Tile size in pixels (`256` or `512`). |
 | `base_url` | string | ❌ | `"api.tomtom.com"` | TomTom endpoint host: `api.tomtom.com` or `kr-api.tomtom.com`. |
 | `basemap` | string | ❌ | `"osm"` | Raster basemap: `osm`, `carto_light`, `carto_dark`, or `topo`. |
+| `lock_map` | boolean | ❌ | `false` | Locks map position and disables pan/zoom interactions when `true`. |
+| `markers` | array | ❌ | `[]` | Optional custom markers. Each marker supports `center: [lng, lat]`, `icon`, `label`, and `color`. |
 
 ## TomTom traffic tile URL used
 

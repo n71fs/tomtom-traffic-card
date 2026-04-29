@@ -2,6 +2,7 @@
 
 A **frontend-only** Home Assistant Lovelace custom card that renders a MapLibre map with:
 
+- Selectable raster basemap (`osm`, `carto_light`, `carto_dark`, `topo`)
 - OpenStreetMap raster base tiles
 - TomTom Traffic Flow raster tile overlay
 

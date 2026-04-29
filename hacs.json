@@ -1,0 +1,6 @@
+{
+  "name": "TomTom Traffic Card",
+  "filename": "tomtom-traffic-card.js",
+  "type": "dashboard",
+  "content_in_root": false
+}

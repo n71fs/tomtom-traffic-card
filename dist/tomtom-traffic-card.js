@@ -106,7 +106,6 @@ class TomtomTrafficCard extends HTMLElement {
     this._mapContainer = this.shadowRoot.getElementById("map");
     this._mapContainer.style.height = this._config.height || "500px";
 
-    this._mapContainer.innerHTML = "";
 
     if (!this._initialized) {
       this._initialized = true;

@@ -100,6 +100,7 @@ base_url: api.tomtom.com
 | `thickness` | number | ❌ | `10` | Segment width multiplier (`1..20`) for `absolute`, `relative`, `relative-delay`, `reduced-sensitivity`. |
 | `tile_size` | number | ❌ | `256` | Tile size in pixels (`256` or `512`). |
 | `base_url` | string | ❌ | `"api.tomtom.com"` | TomTom endpoint host: `api.tomtom.com` or `kr-api.tomtom.com`. |
+| `basemap` | string | ❌ | `"osm"` | Raster basemap: `osm`, `carto_light`, `carto_dark`, or `topo`. |
 
 ## TomTom traffic tile URL used
 
@@ -113,3 +114,4 @@ https://{base_url}/traffic/map/4/tile/flow/{flow_style}/{z}/{x}/{y}.png?key={api
 - The card validates that `api_key` is present.
 - Includes `getCardSize()` and `window.customCards` registration.
 - Cleans up the MapLibre instance when disconnected.
+- Sets raster tile requests to `referrerPolicy: "origin"` for OSM/CARTO/OpenTopoMap compatibility with tile usage policies.

@@ -10,6 +10,7 @@ class TomtomTrafficCard extends HTMLElement {
       thickness: 10,
       tile_size: 256,
       base_url: "api.tomtom.com",
+      basemap: "osm",
     };
   }
 
@@ -27,12 +28,14 @@ class TomtomTrafficCard extends HTMLElement {
       thickness: 10,
       tile_size: 256,
       base_url: "api.tomtom.com",
+      basemap: "osm",
     };
 
     const merged = { ...defaults, ...config };
     const validStyles = ["absolute", "relative", "relative0", "relative0-dark", "relative-delay", "reduced-sensitivity"];
     const validTileSizes = [256, 512];
     const validBaseUrls = ["api.tomtom.com", "kr-api.tomtom.com"];
+    const validBasemaps = ["osm", "carto_light", "carto_dark", "topo"];
 
     if (!Array.isArray(merged.center) || merged.center.length !== 2) {
       throw new Error("tomtom-traffic-card: center must be [lng, lat]");
@@ -58,6 +61,9 @@ class TomtomTrafficCard extends HTMLElement {
 
     if (!validBaseUrls.includes(merged.base_url)) {
       throw new Error(`tomtom-traffic-card: base_url must be one of ${validBaseUrls.join(", ")}`);
+    }
+    if (!validBasemaps.includes(merged.basemap)) {
+      throw new Error(`tomtom-traffic-card: basemap must be one of ${validBasemaps.join(", ")}`);
     }
 
     this._config = merged;
@@ -100,6 +106,73 @@ class TomtomTrafficCard extends HTMLElement {
 
   getCardSize() {
     return 5;
+  }
+
+  _getBasemapDefinition(basemap) {
+    const basemaps = {
+      osm: {
+        sourceId: "osm",
+        source: {
+          type: "raster",
+          tiles: [
+            "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          ],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors, Traffic © TomTom",
+        },
+      },
+      carto_light: {
+        sourceId: "carto-light",
+        source: {
+          type: "raster",
+          tiles: ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors © CARTO, Traffic © TomTom",
+        },
+      },
+      carto_dark: {
+        sourceId: "carto-dark",
+        source: {
+          type: "raster",
+          tiles: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors © CARTO, Traffic © TomTom",
+        },
+      },
+      topo: {
+        sourceId: "topo",
+        source: {
+          type: "raster",
+          tiles: ["https://tile.opentopomap.org/{z}/{x}/{y}.png"],
+          tileSize: 256,
+          attribution:
+            "© OpenTopoMap (CC-BY-SA) © OpenStreetMap contributors, Traffic © TomTom",
+        },
+      },
+    };
+
+    return basemaps[basemap] || basemaps.osm;
+  }
+
+  _buildStyleForBasemap() {
+    const definition = this._getBasemapDefinition(this._config.basemap);
+    return {
+      version: 8,
+      sources: {
+        [definition.sourceId]: definition.source,
+      },
+      layers: [
+        {
+          id: "basemap-layer",
+          type: "raster",
+          source: definition.sourceId,
+          minzoom: 0,
+          maxzoom: 22,
+        },
+      ],
+    };
   }
 
   _render() {
@@ -149,30 +222,17 @@ class TomtomTrafficCard extends HTMLElement {
 
       this._map = new window.maplibregl.Map({
         container: this._mapContainer,
-        style: {
-          version: 8,
-          sources: {
-            osm: {
-              type: "raster",
-              tiles: [
-                "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
-              ],
-              tileSize: 256,
-              attribution:
-                "© OpenStreetMap contributors, Traffic © TomTom",
-            },
-          },
-          layers: [
-            {
-              id: "osm-base",
-              type: "raster",
-              source: "osm",
-              minzoom: 0,
-              maxzoom: 22,
-            },
-          ],
+        style: this._buildStyleForBasemap(),
+        transformRequest: (url, resourceType) => {
+          const needsReferer =
+            resourceType === "Tile" &&
+            (url.includes("openstreetmap.org") ||
+              url.includes("opentopomap.org") ||
+              url.includes("cartocdn.com"));
+          if (needsReferer) {
+            return { url, referrerPolicy: "origin" };
+          }
+          return { url };
         },
         center,
         zoom,
@@ -203,9 +263,12 @@ class TomtomTrafficCard extends HTMLElement {
     }
 
     this._mapContainer.style.height = this._config.height || "500px";
-    this._map.setCenter(this._config.center);
-    this._map.setZoom(this._config.zoom);
-    this._addOrUpdateFlowLayer();
+    this._map.setStyle(this._buildStyleForBasemap());
+    this._map.once("styledata", () => {
+      this._map.setCenter(this._config.center);
+      this._map.setZoom(this._config.zoom);
+      this._addOrUpdateFlowLayer();
+    });
     this._map.resize();
   }
 
@@ -354,6 +417,22 @@ class TomtomTrafficCardEditor extends HTMLElement {
               .map(
                 (style) =>
                   `<option value="${style}" ${this._config.flow_style === style ? "selected" : ""}>${style}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <label>
+          Basemap
+          <select data-key="basemap">
+            ${[
+              ["osm", "OpenStreetMap"],
+              ["carto_light", "CARTO Light"],
+              ["carto_dark", "CARTO Dark"],
+              ["topo", "OpenTopoMap"],
+            ]
+              .map(
+                ([key, label]) =>
+                  `<option value="${key}" ${this._config.basemap === key ? "selected" : ""}>${label}</option>`
               )
               .join("")}
           </select>

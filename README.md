@@ -3,6 +3,7 @@
 A **frontend-only** Home Assistant Lovelace custom card that renders a MapLibre map with:
 
 - Selectable raster basemap (`osm`, `carto_light`, `carto_dark`, `topo`)
+- OpenStreetMap raster base tiles
 - TomTom Traffic Flow raster tile overlay
 
 > ⚠️ **Security warning:** This version is frontend-only, so your TomTom API key is exposed to users in the browser/dev tools/network requests. A future backend/proxy integration could hide and protect the key.
@@ -13,7 +14,6 @@ A **frontend-only** Home Assistant Lovelace custom card that renders a MapLibre 
 - Custom element: `tomtom-traffic-card`
 - Uses `<ha-card>`
 - Dynamically loads MapLibre GL JS + CSS from CDN (if not already loaded)
-- Supports configurable `basemap` values: `osm`, `carto_light`, `carto_dark`, `topo`
 - Supports TomTom `flow_style` values:
   - `absolute`
   - `relative`
@@ -75,7 +75,6 @@ zoom: 11
 height: 500px
 flow_style: relative
 opacity: 0.85
-basemap: osm
 ```
 
 ## Card configuration
@@ -88,7 +87,6 @@ basemap: osm
 | `height` | string | ❌ | `"500px"` | CSS height for map container. |
 | `flow_style` | string | ❌ | `"relative"` | One of: `absolute`, `relative`, `relative-delay`. |
 | `opacity` | number | ❌ | `0.85` | Traffic layer opacity (0 to 1). |
-| `basemap` | string | ❌ | `"osm"` | One of: `osm`, `carto_light`, `carto_dark`, `topo`. |
 
 ## TomTom traffic tile URL used
 
@@ -99,8 +97,6 @@ https://api.tomtom.com/traffic/map/4/tile/flow/{flow_style}/{z}/{x}/{y}.png?key=
 ## Notes
 
 - This is a standalone custom card and does **not** use Home Assistant’s built-in map card.
-- For YAML dashboards, you can use Home Assistant secrets with `api_key: !secret tomtom_api_key` to avoid hard-coding the key in YAML.
-- This frontend-only card still sends the key to the browser at runtime, so it remains visible in network/dev tools.
 - The card validates that `api_key` is present.
 - Includes `getCardSize()` and `window.customCards` registration.
 - Cleans up the MapLibre instance when disconnected.

@@ -12,6 +12,9 @@ class TomtomTrafficCard extends HTMLElement {
       base_url: "api.tomtom.com",
       basemap: "osm",
       title: "",
+      show_title: false,
+      lock_map: false,
+      markers: [],
     };
   }
 
@@ -31,6 +34,9 @@ class TomtomTrafficCard extends HTMLElement {
       base_url: "api.tomtom.com",
       basemap: "osm",
       title: "",
+      show_title: false,
+      lock_map: false,
+      markers: [],
     };
 
     const merged = { ...defaults, ...config };
@@ -38,6 +44,9 @@ class TomtomTrafficCard extends HTMLElement {
     const validTileSizes = [256, 512];
     const validBaseUrls = ["api.tomtom.com", "kr-api.tomtom.com"];
     const validBasemaps = ["osm", "carto_light", "carto_dark", "topo"];
+    if (!Array.isArray(merged.markers)) {
+      throw new Error("tomtom-traffic-card: markers must be an array");
+    }
 
     if (!Array.isArray(merged.center) || merged.center.length !== 2) {
       throw new Error("tomtom-traffic-card: center must be [lng, lat]");
@@ -85,6 +94,7 @@ class TomtomTrafficCard extends HTMLElement {
     this._config = null;
     this._hass = null;
     this._map = null;
+    this._markers = [];
     this._mapReady = false;
     this._mapContainer = null;
     this._loadPromise = null;
@@ -101,6 +111,7 @@ class TomtomTrafficCard extends HTMLElement {
     if (this._map) {
       this._map.remove();
       this._map = null;
+      this._markers = [];
       this._mapReady = false;
       this._initialized = false;
     }
@@ -233,7 +244,7 @@ class TomtomTrafficCard extends HTMLElement {
     this._mapContainer.style.height = this._config.height || "500px";
     const titleEl = this.shadowRoot.getElementById("title");
     const title = (this._config.title || "").trim();
-    if (title) {
+    if (this._config.show_title && title) {
       titleEl.textContent = title;
       titleEl.style.display = "block";
     } else {
@@ -274,10 +285,19 @@ class TomtomTrafficCard extends HTMLElement {
         },
         center,
         zoom,
+        dragPan: !this._config.lock_map,
+        scrollZoom: !this._config.lock_map,
+        doubleClickZoom: !this._config.lock_map,
+        boxZoom: !this._config.lock_map,
+        dragRotate: !this._config.lock_map,
+        keyboard: !this._config.lock_map,
+        touchZoomRotate: !this._config.lock_map,
       });
 
       this._map.on("load", () => {
         this._addOrUpdateFlowLayer();
+        this._applyInteractionLock();
+        this._addOrUpdateMarkers();
         this._mapReady = true;
       });
     } catch (error) {
@@ -304,8 +324,51 @@ class TomtomTrafficCard extends HTMLElement {
       this._map.setCenter(this._config.center);
       this._map.setZoom(this._config.zoom);
       this._addOrUpdateFlowLayer();
+      this._applyInteractionLock();
+      this._addOrUpdateMarkers();
     });
     this._map.resize();
+  }
+
+  _applyInteractionLock() {
+    if (!this._map) return;
+    const lock = Boolean(this._config.lock_map);
+    const method = lock ? "disable" : "enable";
+    this._map.dragPan[method]();
+    this._map.scrollZoom[method]();
+    this._map.boxZoom[method]();
+    this._map.dragRotate[method]();
+    this._map.keyboard[method]();
+    this._map.doubleClickZoom[method]();
+    this._map.touchZoomRotate[method]();
+  }
+
+  _addOrUpdateMarkers() {
+    if (!this._map) return;
+    this._markers.forEach((marker) => marker.remove());
+    this._markers = [];
+    (this._config.markers || []).forEach((markerConfig) => {
+      if (!Array.isArray(markerConfig?.center) || markerConfig.center.length !== 2) return;
+      const markerElement = document.createElement("div");
+      markerElement.style.display = "grid";
+      markerElement.style.placeItems = "center";
+      markerElement.style.width = "28px";
+      markerElement.style.height = "28px";
+      markerElement.style.borderRadius = "50%";
+      markerElement.style.background = markerConfig.color || "#1d4ed8";
+      markerElement.style.color = "#fff";
+      markerElement.style.fontSize = "16px";
+      markerElement.style.fontWeight = "700";
+      markerElement.style.boxShadow = "0 2px 8px rgba(0,0,0,0.35)";
+      markerElement.textContent = markerConfig.icon || "•";
+      const marker = new window.maplibregl.Marker({ element: markerElement })
+        .setLngLat(markerConfig.center);
+      if (markerConfig.label) {
+        marker.setPopup(new window.maplibregl.Popup({ offset: 20 }).setText(markerConfig.label));
+      }
+      marker.addTo(this._map);
+      this._markers.push(marker);
+    });
   }
 
   _addOrUpdateFlowLayer() {
@@ -431,6 +494,20 @@ class TomtomTrafficCardEditor extends HTMLElement {
           <input data-key="title" type="text" value="${this._config.title || ""}" placeholder="Traffic around Downtown" />
         </label>
         <label>
+          Show Title
+          <select data-key="show_title">
+            <option value="false" ${this._config.show_title ? "" : "selected"}>No</option>
+            <option value="true" ${this._config.show_title ? "selected" : ""}>Yes</option>
+          </select>
+        </label>
+        <label>
+          Lock Map Position
+          <select data-key="lock_map">
+            <option value="false" ${this._config.lock_map ? "" : "selected"}>No (Allow movement)</option>
+            <option value="true" ${this._config.lock_map ? "selected" : ""}>Yes</option>
+          </select>
+        </label>
+        <label>
           API Key
           <input data-key="api_key" type="text" value="${this._config.api_key || ""}" />
         </label>
@@ -507,6 +584,10 @@ class TomtomTrafficCardEditor extends HTMLElement {
               .join("")}
           </select>
         </label>
+        <label>
+          Markers (JSON Array)
+          <input data-key="markers" type="text" value='${JSON.stringify(this._config.markers || [])}' placeholder='[{"center":[-82.99,39.96],"icon":"🏠","label":"Home"}]' />
+        </label>
       </div>
       <style>
         .editor-grid {
@@ -552,6 +633,14 @@ class TomtomTrafficCardEditor extends HTMLElement {
       next.center = [lng, lat];
     } else if (key === "zoom" || key === "opacity" || key === "thickness" || key === "tile_size") {
       next[key] = Number(value);
+    } else if (key === "show_title" || key === "lock_map") {
+      next[key] = value === "true";
+    } else if (key === "markers") {
+      try {
+        next.markers = value.trim() ? JSON.parse(value) : [];
+      } catch (_error) {
+        return;
+      }
     } else {
       next[key] = value;
     }
